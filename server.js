@@ -7,22 +7,42 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Yhteyden määrittely MySQL:ään
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+require('dotenv').config(); // Lataa ympäristömuuttujat .env-tiedostosta
+const mysql = require('mysql2');
+
+// Luo yhteys MySQL-tietokantaan
+const connection = mysql.createConnection({
+    host: process.env.DB_HOST,       // Azure MySQL palvelimen osoite
+    user: process.env.DB_USER,       // Käyttäjätunnus (muodossa käyttäjä@palvelin)
+    password: process.env.DB_PASS,   // Salasana
+    database: process.env.DB_NAME,   // Tietokannan nimi
+    port: 3306,                      // MySQL käyttää yleensä porttia 3306
+    ssl: {
+        rejectUnauthorized: true     // Azure MySQL vaatii SSL-yhteyden
+    }
 });
 
-// Testataan yhteys
-db.connect(err => {
-  if (err) {
-    console.error('Virhe tietokantayhteydessä:', err);
-    process.exit(1); // Keskeytetään sovellus, jos yhteys epäonnistuu
-  }
-  console.log('Yhteys MySQL-tietokantaan onnistui!');
+// Testaa yhteys
+connection.connect((err) => {
+    if (err) {
+        console.error('Error connecting to the database:', err.message);
+    } else {
+        console.log('Connected to the MySQL database.');
+    }
 });
+
+// Esimerkki kyselystä
+connection.query('SELECT 1 + 1 AS solution', (err, results) => {
+    if (err) {
+        console.error('Query error:', err.message);
+    } else {
+        console.log('The solution is:', results[0].solution); // Pitäisi tulostaa 2
+    }
+});
+
+// Sulje yhteys tarvittaessa
+// connection.end();
+
 
 // --------------- Reitit käyttäjille ----------------
 
@@ -36,6 +56,7 @@ app.get('/users', async (req, res) => {
     res.status(500).send('Virhe haettaessa käyttäjiä');
   }
 });
+
 
 // Hae käyttäjä ID:n perusteella
 app.get('/users/:id', async (req, res) => {
